@@ -93,10 +93,50 @@ function startupSub2(req, res, next) {
 		})
 }
 
+function startupSub3(req, res, next) {
+	const docId = req.params.id;
+	r.db("dd").table("startups").get(docId)("companies")
+		.keys().map(k => { 
+			return r.db("dd").
+					table("startups").get(docId)("companies")(k)
+		})
+		.run({ cursor: true })
+		.then(cursor => {
+			if (cursor) {
+				res.writeHead(200, { 'Content-Type': 'application/json' });
+
+				const stringify = JSONStream.stringifyObject();
+				
+				stringify.pipe(res, {end: true});
+
+				stringify.on("error", err => {
+					console.log(error);
+				})
+
+				cursor.each((err, row) => {
+					if (err) throw err;
+					stringify.write([row._id.$oid, row]);
+				},
+				() => {
+					stringify.end();
+					res.on('finish', next);
+				});
+			}
+			else {
+				next(new errors.NotFoundError())
+			}
+		})
+		.catch(e => {
+			console.log(e);
+			next(new errors.InternalServerError())
+		})
+}
+
 var server = restify.createServer();
 
 server.get('/startup/stream1/:id', startupSub);
 server.get('/startup/stream2/:id', startupSub2);
+server.get('/startup/stream3/:id', startupSub3);
 server.get('/time', respond);
 server.get(/\/?.*/, restify.plugins.serveStatic({
 	directory: './public',

@@ -8,12 +8,13 @@ var r = require('rethinkdbdash')({
 
 const spinner = ora('Preparing data').start();
 
-const doc = { companies: [] };
+const doc = { companies: {} };
 
 let lcount = 0;
 lr.on("line", function(line, lineCount, byteCount) {
 	if (lcount <= 50) {
-		doc.companies.push(JSON.parse(line));
+		const parsed = JSON.parse(line);
+		Object.assign(doc.companies, { [parsed["_id"]["$oid"]] : parsed });
 	}
 	lcount++;
 });
